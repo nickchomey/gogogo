@@ -46,21 +46,20 @@ func openTree(root string) (*treeFS, error) {
 // Close releases the directory handle.
 func (t *treeFS) Close() error { return t.r.Close() }
 
-// rel converts a path inside the root to a root-relative name. Callers
-// historically pass filepath.Join(root, ...) where root may itself be
-// relative (e.g. --dir gggtest), so a relative input is resolved against the
-// process CWD first — matching how openTree resolved the root. A path outside
-// the root yields an error; os.Root would also refuse it, so this is belt and
-// suspenders.
-func (t *treeFS) rel(abs string) (string, error) {
-	if !filepath.IsAbs(abs) {
-		absAbs, err := filepath.Abs(abs)
+// rel converts a path to a root-relative name. The path may be absolute or
+// relative to the process working directory: --dir defaults to ./<name>, so
+// callers legitimately build CWD-relative paths from a relative root, and
+// filepath.Rel refuses to mix the two. A path outside the root yields an
+// error; os.Root would also refuse it, so this is belt and suspenders.
+func (t *treeFS) rel(p string) (string, error) {
+	if !filepath.IsAbs(p) {
+		abs, err := filepath.Abs(p)
 		if err != nil {
 			return "", err
 		}
-		abs = absAbs
+		p = abs
 	}
-	rel, err := filepath.Rel(t.root, abs)
+	rel, err := filepath.Rel(t.root, p)
 	if err != nil {
 		return "", err
 	}

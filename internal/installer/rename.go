@@ -34,7 +34,11 @@ func renameTree(root, newName, newOwner string) error {
 		return err
 	}
 	defer t.Close()
-	files, err := collectRenameFiles(root)
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	files, err := collectRenameFiles(absRoot)
 	if err != nil {
 		return err
 	}
@@ -67,6 +71,14 @@ func collectRenameFiles(root string) ([]string, error) {
 			return nil
 		}
 		if rel == filepath.Join("cmd", "gogogo", "rename.go") {
+			return nil
+		}
+		// Skip symlinks and other non-regular files. .agents/skills/*
+		// are symlinks to dirs inside skills/; Walk reports the link
+		// itself (IsDir false), and reading through it fails with
+		// "is a directory". The link target is walked via its real
+		// path, so nothing is missed by skipping the link.
+		if !info.Mode().IsRegular() {
 			return nil
 		}
 		files = append(files, p)
